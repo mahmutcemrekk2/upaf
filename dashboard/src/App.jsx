@@ -16,10 +16,16 @@ const App = () => {
 
   useEffect(() => {
     // Check current session
-    authService.getCurrentUser().then(user => {
-      setUser(user);
-      setInitializing(false);
-    });
+    authService.getCurrentUser()
+      .then(user => {
+        setUser(user);
+      })
+      .catch(err => {
+        console.error('Session check error:', err);
+      })
+      .finally(() => {
+        setInitializing(false);
+      });
   }, []);
 
   const handleLogout = async () => {
