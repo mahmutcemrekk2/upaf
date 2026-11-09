@@ -5,6 +5,7 @@ import { Play, Plus, Save, ArrowLeft, Terminal, LayoutList, Download, Code, Glob
 
 import StepCard from '../components/StepCard';
 import TestRecorderModal from '../components/TestRecorderModal';
+import { RUNNER_URL, PROXY_URL, describeRunnerError } from '../lib/runner';
 import { testCaseService } from '../services/testCase';
 import { gitService } from '../services/git';
 import { globalTestState } from '../services/globalTestState';
@@ -885,7 +886,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
         }
           
         let authHeaders = parseHeaders(activeAuthMethod.headers);
-        const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+        const proxyUrl = PROXY_URL;
         
         const authRes = await fetch(proxyUrl, {
           method: 'POST',
@@ -965,7 +966,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
     if (generateAutoSchema) {
       try {
         const fullUrl = generatePath.startsWith('http') ? generatePath : `${activeEnv?.url || ''}${generatePath}`;
-        const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+        const proxyUrl = PROXY_URL;
         
         let headersObj = {
           ...authDefaultHeaders,
@@ -1353,7 +1354,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
 
       if (hasUiSteps) {
         try {
-          const serverUrl = 'http://localhost:5175';
+          const serverUrl = RUNNER_URL;
           const res = await fetch(`${serverUrl}/api/run-ui-test`, {
 
             method: 'POST',
@@ -1393,7 +1394,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
 
 
         } catch (err) {
-          setExecutionLogs(prev => [...prev, { type: 'error', message: `❌ UI Execution Error: ${err.message}`, time: new Date().toLocaleTimeString() }]);
+          setExecutionLogs(prev => [...prev, { type: 'error', message: `❌ UI Execution Error: ${describeRunnerError(err)}`, time: new Date().toLocaleTimeString() }]);
         } finally {
           setIsRunning(false);
         }
@@ -1471,7 +1472,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
                   }
 
                   let authHeaders = parseHeaders(methodConfig.headers);
-                  const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+                  const proxyUrl = PROXY_URL;
 
                   try {
                     const authRes = await fetch(proxyUrl, {
@@ -1582,7 +1583,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
 
             try {
               // Route through proxy to avoid CORS
-              const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+              const proxyUrl = PROXY_URL;
               
               // Generate cURL command for debugging
               const requestBody = ['POST', 'PUT', 'PATCH'].includes(step.action.toUpperCase()) ? stepValue : null;
@@ -1880,7 +1881,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
                   }
 
                   let authHeaders = parseHeaders(methodConfig.headers);
-                  const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+                  const proxyUrl = PROXY_URL;
 
                   try {
                     const authRes = await fetch(proxyUrl, {
@@ -1988,7 +1989,7 @@ const TestBuilderPage = ({ onBack, project, user }) => {
             }
 
             try {
-              const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+              const proxyUrl = PROXY_URL;
               
               // Generate cURL command for debugging
               const requestBody = ['POST', 'PUT', 'PATCH'].includes(step.action.toUpperCase()) ? stepValue : null;

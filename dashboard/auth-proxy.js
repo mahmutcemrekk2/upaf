@@ -949,6 +949,11 @@ app.post('/api/run-ui-test', async (req, res) => {
   const { steps, activeEnv, selfHealingEnabled = true, isHeadless = false } = req.body;
   const logs = [];
   let browser = null;
+  let page = null; // declared outside try so the catch block can take a failure screenshot
+
+  if (!Array.isArray(steps)) {
+    return res.status(400).json({ success: false, error: 'steps must be an array', logs: [] });
+  }
 
   try {
     logs.push({ type: 'info', message: `🚀 Starting Live UI Test Execution (${steps.length} steps) [Headless: ${isHeadless ? 'true' : 'false'}]`, time: new Date().toLocaleTimeString() });
@@ -959,8 +964,7 @@ app.post('/api/run-ui-test', async (req, res) => {
       args: ['--disable-web-security', '--start-maximized']
     });
     const context = await browser.newContext({ viewport: null });
-    const page = await context.newPage();
-
+    page = await context.newPage();
 
     let autoHealedCount = 0;
     const updatedSteps = [...steps];
@@ -1197,7 +1201,7 @@ app.post('/api/run-ui-test', async (req, res) => {
     await browser.close().catch(() => {});
 
     res.json({
-      success: true,
+      success: !logs.some(l => l.type === 'error'),
       logs,
       autoHealedCount,
       updatedSteps,

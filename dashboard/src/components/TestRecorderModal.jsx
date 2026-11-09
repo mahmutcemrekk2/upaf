@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Play, Square, Sparkles, CheckCircle2, Globe, ArrowRight, Video, AlertCircle, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RUNNER_URL, describeRunnerError } from '../lib/runner';
 
 export default function TestRecorderModal({ isOpen, onClose, onSaveSteps, defaultUrl = 'https://example.com' }) {
   const [url, setUrl] = useState(defaultUrl);
@@ -30,7 +31,7 @@ export default function TestRecorderModal({ isOpen, onClose, onSaveSteps, defaul
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    const serverUrl = 'http://localhost:5175';
+    const serverUrl = RUNNER_URL;
     try {
       const res = await fetch(`${serverUrl}/api/recorder/start`, {
         method: 'POST',
@@ -63,7 +64,7 @@ export default function TestRecorderModal({ isOpen, onClose, onSaveSteps, defaul
 
     } catch (err) {
       console.error('Start recording error:', err);
-      setError(err.message || 'Canlı kaydedici başlatılamadı. Proxy sunucusunun (http://localhost:5175) çalıştığından emin olun.');
+      setError(describeRunnerError(err));
       setIsRecording(false);
     }
   };
@@ -71,7 +72,7 @@ export default function TestRecorderModal({ isOpen, onClose, onSaveSteps, defaul
   const handleStopRecording = async () => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
 
-    const serverUrl = 'http://localhost:5175';
+    const serverUrl = RUNNER_URL;
     try {
       if (sessionId) {
         const res = await fetch(`${serverUrl}/api/recorder/stop`, {
