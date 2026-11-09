@@ -1,4 +1,5 @@
 import { LocatorInfo, TestSuite } from './models';
+import { str, stepNeedsElement } from './utils';
 
 /**
  * Extracts unique locators from a test suite to build the Page Object.
@@ -8,7 +9,7 @@ function extractLocators(suite: TestSuite): LocatorInfo[] {
   
   for (const testCase of suite.testCases) {
     for (const step of testCase.steps) {
-      if (step.locator && step.locator.name) {
+      if (stepNeedsElement(step) && step.locator && step.locator.name) {
         if (!locators.has(step.locator.name)) {
           locators.set(step.locator.name, step.locator);
         }
@@ -23,21 +24,21 @@ function extractLocators(suite: TestSuite): LocatorInfo[] {
  * Maps a LocatorInfo object to a Playwright locator string.
  */
 function buildLocatorString(locator: LocatorInfo): string {
+  const value = locator.value || '';
   switch (locator.strategy) {
     case 'id':
-      return `page.locator('#${locator.value}')`;
-    case 'css':
-      return `page.locator('${locator.value}')`;
+      return `page.locator(${str(value.startsWith('#') ? value : `#${value}`)})`;
     case 'xpath':
-      return `page.locator('${locator.value}')`;
+      return `page.locator(${str(value.startsWith('xpath=') || value.startsWith('/') || value.startsWith('(') ? value : `xpath=${value}`)})`;
     case 'data-testid':
-      return `page.getByTestId('${locator.value}')`;
+      return `page.getByTestId(${str(value)})`;
     case 'text':
-      return `page.getByText('${locator.value}')`;
+      return `page.getByText(${str(value)})`;
     case 'role':
-      return `page.getByRole('${locator.value}' as any)`; // Simplify for now
+      return `page.getByRole(${str(value)} as any)`; // Simplify for now
+    case 'css':
     default:
-      return `page.locator('${locator.value}')`;
+      return `page.locator(${str(value)})`;
   }
 }
 
