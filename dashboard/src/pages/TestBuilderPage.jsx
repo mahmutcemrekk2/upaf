@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, Save, ArrowLeft, Terminal, LayoutList, Download, Code, Globe, X, GitBranch, GitPullRequest, CloudUpload, Shield, BookOpen, Search, Copy, PlusCircle, FolderPlus, Folder, FolderOpen, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
+import { Play, Plus, Save, ArrowLeft, Terminal, LayoutList, Download, Code, Globe, X, GitBranch, GitPullRequest, CloudUpload, Shield, BookOpen, Search, Copy, PlusCircle, FolderPlus, Folder, FolderOpen, ChevronDown, ChevronRight, Wand2, Video, Maximize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+
+
 import StepCard from '../components/StepCard';
+import TestRecorderModal from '../components/TestRecorderModal';
 import { testCaseService } from '../services/testCase';
 import { gitService } from '../services/git';
 import { globalTestState } from '../services/globalTestState';
@@ -502,8 +505,16 @@ const TestBuilderPage = ({ onBack, project, user }) => {
   const [activeEnv, setActiveEnv] = useState(project.environments?.[0] || null);
   const [showTerminal, setShowTerminal] = useState(false);
   const [executionLogs, setExecutionLogs] = useState([]);
+  const [lastScreenshot, setLastScreenshot] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isRecorderOpen, setIsRecorderOpen] = useState(false);
+
+  const [isHeadless, setIsHeadless] = useState(false);
+
   const [isPushing, setIsPushing] = useState(false);
   const [generateAuthMethodName, setGenerateAuthMethodName] = useState('');
+
 
   // Step Library states
   const [showStepLibrary, setShowStepLibrary] = useState(false);
@@ -1335,8 +1346,60 @@ const TestBuilderPage = ({ onBack, project, user }) => {
     const runExecution = async () => {
       setIsRunning(true);
       setShowTerminal(true);
+      setLastScreenshot(null);
       setExecutionLogs([{ type: 'info', message: `🚀 Starting test: ${testName}`, time: new Date().toLocaleTimeString() }]);
-      
+
+      const hasUiSteps = steps.some(s => ['navigate', 'click', 'fill', 'type', 'verifyText', 'verifyVisible', 'verifyValue', 'check', 'uncheck', 'select'].includes(s.action));
+
+      if (hasUiSteps) {
+        try {
+          const serverUrl = 'http://localhost:5175';
+          const res = await fetch(`${serverUrl}/api/run-ui-test`, {
+
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              steps,
+              activeEnv,
+              selfHealingEnabled: true,
+              isHeadless: isHeadless
+            })
+
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.logs) {
+              setExecutionLogs(data.logs);
+            }
+            if (data.autoHealedCount > 0 && data.updatedSteps) {
+              setSteps(data.updatedSteps);
+            }
+            if (data.screenshot && typeof data.screenshot === 'string' && data.screenshot.startsWith('data:image/')) {
+              setLastScreenshot(data.screenshot);
+            }
+          } else {
+            const errData = await res.json().catch(() => null);
+            if (errData?.logs) {
+              setExecutionLogs(errData.logs);
+            }
+            if (errData?.screenshot && typeof errData.screenshot === 'string' && errData.screenshot.startsWith('data:image/')) {
+              setLastScreenshot(errData.screenshot);
+            } else if (!errData?.logs) {
+              setExecutionLogs(prev => [...prev, { type: 'error', message: `❌ UI Execution Failed: ${res.status}`, time: new Date().toLocaleTimeString() }]);
+            }
+          }
+
+
+
+        } catch (err) {
+          setExecutionLogs(prev => [...prev, { type: 'error', message: `❌ UI Execution Error: ${err.message}`, time: new Date().toLocaleTimeString() }]);
+        } finally {
+          setIsRunning(false);
+        }
+        return;
+      }
+
       let lastResponse = null;
       let lastBody = null;
       let variables = {};
@@ -2529,10 +2592,32 @@ const TestBuilderPage = ({ onBack, project, user }) => {
                 )}
               </div>
               <button 
+                type="button"
+                onClick={() => setIsHeadless(!isHeadless)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                  !isHeadless
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                    : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                }`}
+                title="Test koşturulurken Chrome penceresini canlı görünür yapın"
+              >
+                <Globe size={14} />
+                <span>{!isHeadless ? '🌐 Canlı Tarayıcı (Açık)' : '👻 Headless (Gizli)'}</span>
+              </button>
+              <button 
+                onClick={() => setIsRecorderOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-sm font-bold transition-all shadow-lg shadow-rose-600/20 active:scale-95"
+              >
+
+                <Video size={16} />
+                <span>Senaryo Kaydet</span>
+              </button>
+              <button 
                 onClick={handleQuickRun}
                 disabled={isRunning}
                 className="flex items-center gap-2 px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold transition-all shadow-lg shadow-brand-500/20 active:scale-95 disabled:opacity-50"
               >
+
                 {isRunning ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
@@ -2657,9 +2742,44 @@ const TestBuilderPage = ({ onBack, project, user }) => {
                     <span>Executing next step...</span>
                   </div>
                 )}
+                {lastScreenshot && typeof lastScreenshot === 'string' && lastScreenshot.startsWith('data:image/') && (
+                  <div className="mt-3 p-3 bg-slate-900 border border-slate-800 rounded-xl screenshot-container">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        📷 Test Çıktı Ekran Görüntüsü (Execution Screenshot)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowImageModal(true)}
+                        className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all"
+                      >
+                        <Maximize2 size={12} />
+                        <span>Büyüt (Zoom)</span>
+                      </button>
+                    </div>
+                    <div className="flex justify-center items-center overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/80 p-3 shadow-inner">
+                      <img
+                        src={lastScreenshot}
+                        alt="Execution Output"
+                        onClick={() => setShowImageModal(true)}
+                        className="max-h-72 w-auto h-auto object-contain rounded-lg border border-slate-800/80 shadow-md cursor-zoom-in hover:scale-[1.01] hover:opacity-95 transition-all"
+                        onError={(e) => {
+                          const container = e.currentTarget.closest('.screenshot-container');
+                          if (container) container.style.display = 'none';
+                        }}
+                      />
+                    </div>
+
+                  </div>
+                )}
+
+
+
+
                 <div ref={terminalEndRef} />
               </div>
             </motion.div>
+
           )}
         </AnimatePresence>
       </main>
@@ -3083,8 +3203,122 @@ const TestBuilderPage = ({ onBack, project, user }) => {
         )}
       </AnimatePresence>
 
+      <TestRecorderModal
+        isOpen={isRecorderOpen}
+        onClose={() => setIsRecorderOpen(false)}
+        onSaveSteps={(recordedSteps) => {
+          if (recordedSteps && recordedSteps.length > 0) {
+            setSteps(prev => [...prev, ...recordedSteps]);
+          }
+        }}
+        defaultUrl={activeEnv?.url || 'https://example.com'}
+      />
+
+      {/* Full-Screen High Resolution Interactive Zoom Modal */}
+      {showImageModal && lastScreenshot && (
+        <div className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          {/* Header & Zoom Controls Toolbar */}
+          <div className="w-full max-w-6xl flex items-center justify-between p-3.5 bg-slate-900 border border-slate-800 rounded-t-2xl shadow-2xl">
+            <div className="text-sm font-bold text-white flex items-center gap-2">
+              <Maximize2 size={16} className="text-brand-400" />
+              <span>📷 Tam Sayfa Ekran Görüntüsü (İnteraktif Zoom)</span>
+            </div>
+
+            {/* Zoom Control Buttons */}
+            <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setZoomLevel(prev => Math.max(0.2, +(prev - 0.25).toFixed(2)))}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                title="Uzaklaştır (Zoom Out)"
+              >
+                <ZoomOut size={16} />
+              </button>
+
+              <span className="text-xs font-mono font-bold text-brand-400 px-2 min-w-[55px] text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setZoomLevel(prev => Math.min(5, +(prev + 0.25).toFixed(2)))}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                title="Yakınlaştır (Zoom In)"
+              >
+                <ZoomIn size={16} />
+              </button>
+
+              <div className="w-[1px] h-4 bg-slate-800 mx-1" />
+
+              <button
+                type="button"
+                onClick={() => setZoomLevel(1)}
+                className="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all text-xs font-semibold flex items-center gap-1"
+                title="Sıfırla (100%)"
+              >
+                <RotateCcw size={13} />
+                <span>100%</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setZoomLevel(2)}
+                className="px-2 py-1 text-brand-400 hover:text-brand-300 hover:bg-brand-500/10 rounded-lg transition-all text-xs font-semibold"
+                title="Okuma Modu (200%)"
+              >
+                200%
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowImageModal(false);
+                setZoomLevel(1);
+              }}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Interactive Zoomable & Scrollable Container */}
+          <div
+            className="w-full max-w-6xl h-[82vh] overflow-auto bg-slate-950 p-6 border-x border-b border-slate-800 rounded-b-2xl shadow-2xl flex justify-center items-start select-none"
+            onWheel={(e) => {
+              if (e.ctrlKey || e.metaKey || e.altKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                  setZoomLevel(prev => Math.min(5, +(prev + 0.15).toFixed(2)));
+                } else if (e.deltaY > 0) {
+                  setZoomLevel(prev => Math.max(0.2, +(prev - 0.15).toFixed(2)));
+                }
+              }
+            }}
+          >
+            <div
+              style={{
+                transform: `scale(${zoomLevel})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.1s ease-out'
+              }}
+              className="inline-block shadow-2xl rounded border border-slate-800"
+            >
+              <img
+                src={lastScreenshot}
+                alt="Full Size Zoomable Output"
+                className="max-w-none h-auto rounded shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
+
   );
 };
 
+
 export default TestBuilderPage;
+

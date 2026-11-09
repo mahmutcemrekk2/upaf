@@ -8,7 +8,10 @@ export type ActionType =
   | 'waitForElement' 
   | 'verifyText' 
   | 'verifyVisible'
+  | 'verifyValue'
+  | 'custom'
   | 'apiRequest';
+
 
 export type LocatorStrategy = 
   | 'css' 
