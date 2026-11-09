@@ -477,7 +477,7 @@ const StepCard = ({ step, index, projectType, updateStep, removeStep, selectedCu
         <div className="grid grid-cols-12 gap-4">
           
           {/* Action Selection */}
-          <div className="col-span-12 md:col-span-4">
+          <div className="col-span-12 md:col-span-3">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               {libraryLanguage === 'tr' ? 'Adım Yöntemi' : 'Action'}
             </label>
@@ -497,61 +497,68 @@ const StepCard = ({ step, index, projectType, updateStep, removeStep, selectedCu
             </div>
           </div>
 
-          {/* Locator / URL / JSONPath Input */}
-          {(requiresLocator || isRequestAction || isDataAction) && (
-            <div className="col-span-12 md:col-span-5 flex gap-2">
-              {!isRequestAction && !isDataAction && (
-                <div className="w-1/3">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Target By</label>
-                  <div className="relative">
-                    <select
-                      value={step.locator?.strategy || 'css'}
-                      onChange={(e) => {
-                        const newLocator = { ...step.locator, strategy: e.target.value };
-                        updateStep(index, 'locator', newLocator);
-                      }}
-                      className="w-full appearance-none bg-dark-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-brand-500 outline-none transition-all"
-                    >
-                      {locatorStrategies.map((s) => (
-                        <option key={s.id} value={s.id}>{s.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-              )}
-              <div className={(!isRequestAction && !isDataAction) ? 'w-2/3' : 'w-full'}>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  {isRequestAction ? 'Endpoint URL / Path' : isDataAction ? 'JSONPath' : 'Selector / Value'}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={step.locator?.value || ''}
-                    onChange={(e) => {
-                      const newLocator = { ...step.locator, value: e.target.value, strategy: isRequestAction ? 'endpoint' : isDataAction ? 'jsonpath' : (step.locator?.strategy || 'css') };
-                      updateStep(index, 'locator', newLocator);
-                    }}
-                    placeholder={isRequestAction ? '/api/v1/...' : isDataAction ? '$.data.id' : 'e.g. #submit-btn'}
-                    className="flex-1 bg-dark-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-brand-500 outline-none transition-all font-mono"
-                  />
-                  {requiresLocator && (
-                    <input
-                      type="text"
-                      value={step.locator?.name || ''}
-                      onChange={(e) => {
-                        const newLocator = { ...step.locator, name: e.target.value };
-                        updateStep(index, 'locator', newLocator);
-                      }}
-                      placeholder="Name"
-                      className="w-1/4 bg-dark-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-brand-400 focus:border-brand-500 outline-none transition-all"
-                      title="Variable name for this element"
-                    />
-                  )}
-                </div>
+          {/* Strategy (Target By) */}
+
+          {!isRequestAction && !isDataAction && requiresLocator && (
+            <div className="col-span-12 md:col-span-2">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Target By</label>
+              <div className="relative">
+                <select
+                  value={step.locator?.strategy || 'css'}
+                  onChange={(e) => {
+                    const newLocator = { ...step.locator, strategy: e.target.value };
+                    updateStep(index, 'locator', newLocator);
+                  }}
+                  className="w-full appearance-none bg-dark-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-brand-500 outline-none transition-all"
+                >
+                  {locatorStrategies.map((s) => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
           )}
+
+          {/* Selector / Value Input */}
+          {(requiresLocator || isRequestAction || isDataAction) && (
+            <div className={`col-span-12 ${requiresLocator ? 'md:col-span-4' : 'md:col-span-6'}`}>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                {isRequestAction ? 'Endpoint URL / Path' : isDataAction ? 'JSONPath' : 'Selector / Value'}
+              </label>
+              <input
+                type="text"
+                value={step.locator?.value || ''}
+                onChange={(e) => {
+                  const newLocator = { ...step.locator, value: e.target.value, strategy: isRequestAction ? 'endpoint' : isDataAction ? 'jsonpath' : (step.locator?.strategy || 'css') };
+                  updateStep(index, 'locator', newLocator);
+                }}
+                placeholder={isRequestAction ? '/api/v1/...' : isDataAction ? '$.data.id' : 'e.g. #submit-btn'}
+                className="w-full bg-dark-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-brand-500 outline-none transition-all font-mono"
+              />
+            </div>
+          )}
+
+          {/* Element Name Input */}
+          {requiresLocator && (
+            <div className="col-span-12 md:col-span-3">
+              <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-wider mb-1.5">
+                {libraryLanguage === 'tr' ? 'Eleman Adı (Name)' : 'Element Name'}
+              </label>
+              <input
+                type="text"
+                value={(!step.locator?.name || step.locator?.name === 'NaN' || step.locator?.name === 'undefined') ? '' : step.locator.name}
+                onChange={(e) => {
+                  const newLocator = { ...step.locator, name: e.target.value };
+                  updateStep(index, 'locator', newLocator);
+                }}
+                placeholder="Örn: loanAmountInput"
+                className="w-full bg-slate-900/90 border border-sky-500/30 rounded-xl px-3 py-2.5 text-xs text-sky-300 font-mono font-medium focus:border-sky-400 focus:ring-1 focus:ring-sky-400 outline-none transition-all placeholder:text-slate-600"
+                title="Değişken Adı / Eleman Etiketi (Variable Name / Label)"
+              />
+            </div>
+          )}
+
 
           {/* Action Buttons for API */}
           {isRequestAction && (

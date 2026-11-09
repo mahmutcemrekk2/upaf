@@ -49,6 +49,9 @@ graph TD
 - [x] **Live Runner (Quick Run):** Real-time API execution within the dashboard with a live terminal output.
 - [x] **Generator Engine:** Core `upaf/generator` for Spec/POM production.
 - [x] **Git Integration:** Automated push to GitHub/GitLab.
+- [x] **Live Recorder:** Records clicks/fills/selects and text/visible assertions from a real browser (`auth-proxy.js` → `/api/recorder/*`).
+- [x] **Live UI Runner:** Executes UI steps with Playwright, fallback-based locator healing and screenshots (`/api/run-ui-test`). Runs locally: `cd dashboard && npm run proxy`, URL via `VITE_RUNNER_URL`.
+- [x] **Generator hardening (Phase 4.5):** Literal escaping, `verifyValue`, auto-derived element names.
 - [ ] **Visual Testing:** Image comparison and viewport regression.
 
 ## 🗺️ Roadmap
@@ -56,4 +59,4 @@ graph TD
 2. **Phase 2:** Database Integration: Link Test Builder's LocalStorage states to Supabase `projects` and `test_steps` tables ✅ (Complete).
 3. **Phase 3:** Git Integration: Automate Push/PR deliveries to customer repositories ✅ (Complete).
 4. **Phase 4:** Monetization: Handle `is_free` restrictions and subscriptions.
-5. **Phase 5:** Intelligence: Visual Testing AI and Locator Self-Healing.
+5. **Phase 5:** Intelligence: Recorder ✅, UI Runner ✅, AI Locator Self-Healing, Visual Testing 🟡. See `plan.md`.

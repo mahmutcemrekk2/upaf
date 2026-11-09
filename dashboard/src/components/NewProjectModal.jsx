@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PROXY_URL } from '../lib/runner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, TerminalSquare, MousePointerClick, Image as ImageIcon, ArrowRight, CheckCircle2, Settings2, Code2, Globe, Shield, Key, Plus } from 'lucide-react';
 import { projectService } from '../services/projects';
@@ -148,7 +149,7 @@ const NewProjectModal = ({ isOpen, onClose, onSuccess, initialData = null }) => 
       const headers = parseHeaders(auth.headers);
       
       // Zero-logic, direct pass to proxy to match the successful node script
-      const proxyUrl = import.meta.env.DEV ? '/proxy' : 'http://localhost:5175/proxy';
+      const proxyUrl = PROXY_URL;
       const res = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

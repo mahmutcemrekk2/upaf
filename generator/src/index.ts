@@ -1,6 +1,7 @@
 import { TestSuite } from './models';
 import { generateBasePage, generatePageObject } from './pomGenerator';
 import { generateSpecFile } from './specGenerator';
+import { normalizeSuite, str, toIdentifier, transliterate } from './utils';
 import { STATE_STORE_TEMPLATE, API_MANAGER_TEMPLATE, CORE_INDEX_TEMPLATE } from './coreFramework';
 
 export * from './models';
@@ -20,7 +21,8 @@ const AUTO_GENERATED_HEADER = `/**
  * ANY CHANGES WILL BE OVERWRITTEN ON NEXT EXPORT.
  */\n\n`;
 
-export function generatePlaywrightProject(suite: TestSuite): GeneratedFile[] {
+export function generatePlaywrightProject(rawSuite: TestSuite): GeneratedFile[] {
+  const suite = normalizeSuite(rawSuite);
   const files: GeneratedFile[] = [];
 
   // 1. Generate Core Framework files for API Testing
@@ -47,14 +49,16 @@ export function generatePlaywrightProject(suite: TestSuite): GeneratedFile[] {
 
   // 3. Generate Page Object for the Suite
   // For simplicity, we use the Suite title to name the POM, removing spaces.
-  const pomClassName = suite.title.replace(/[^a-zA-Z0-9]/g, '') + 'Page';
+  const pomId = toIdentifier(suite.title) || 'suite';
+  const pomBase = pomId.charAt(0).toUpperCase() + pomId.slice(1);
+  const pomClassName = (/^[A-Za-z]/.test(pomBase) ? pomBase : `Suite${pomBase}`) + 'Page';
   files.push({
     filename: `tests/upaf-generated/pages/${pomClassName}.ts`,
     content: AUTO_GENERATED_HEADER + generatePageObject(pomClassName, suite),
   });
 
   // 4. Generate Spec File
-  const specFileName = suite.title.replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase() + '.spec.ts';
+  const specFileName = transliterate(suite.title).replace(/[^a-zA-Z0-9-]/g, '_').toLowerCase() + '.spec.ts';
   files.push({
     filename: `tests/upaf-generated/${specFileName}`,
     content: AUTO_GENERATED_HEADER + generateSpecFile(suite, pomClassName),
@@ -70,7 +74,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'html',
   use: {
-    baseURL: '${suite.baseUrl}',
+    baseURL: ${str(suite.baseUrl)},
     trace: 'on-first-retry',
   },
   projects: [

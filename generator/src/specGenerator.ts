@@ -1,14 +1,15 @@
-import { TestSuite, TestCase, TestStep, ApiAssertion } from './models';
+import { TestSuite, TestStep, ApiAssertion } from './models';
+import { str, comment } from './utils';
 
 function generateAssertionCode(responseName: string, assertion: ApiAssertion): string {
-  const targetStr = typeof assertion.target === 'string' ? `'${assertion.target}'` : 'undefined';
-  const valStr = typeof assertion.value === 'object' ? JSON.stringify(assertion.value, null, 2).replace(/\n/g, '\n    ') : typeof assertion.value === 'string' ? `'${assertion.value}'` : assertion.value;
+  const targetStr = typeof assertion.target === 'string' ? str(assertion.target) : 'undefined';
+  const valStr = typeof assertion.value === 'object' ? JSON.stringify(assertion.value, null, 2).replace(/\n/g, '\n    ') : typeof assertion.value === 'string' ? str(assertion.value) : assertion.value;
 
   switch (assertion.type) {
     case 'status':
       return `    await apiManager.assertStatus(${responseName}, ${assertion.value});\n`;
     case 'contains':
-      return `    await apiManager.assertContainsText(${responseName}, '${assertion.value}');\n`;
+      return `    await apiManager.assertContainsText(${responseName}, ${str(assertion.value)});\n`;
     case 'equals':
       return `    await apiManager.assertJsonEquals(${responseName}, ${targetStr}, ${valStr});\n`;
     case 'jsonSchema':
@@ -22,15 +23,15 @@ function generateStepCode(step: TestStep, index: number, pomInstanceName: string
   let code = '';
   
   if (step.description) {
-    code += `    // ${step.description}\n`;
+    code += `    // ${comment(step.description)}\n`;
   }
 
   if (step.action === 'apiRequest' && step.apiRequest) {
     const responseName = `response_${index}`;
     const req = step.apiRequest;
     
-    const methodStr = `'${req.method}'`;
-    const urlStr = `'${req.url}'`;
+    const methodStr = str(req.method);
+    const urlStr = str(req.url);
     
     const headersStr = req.headers ? `, headers: ${JSON.stringify(req.headers, null, 2).replace(/\n/g, '\n    ')}` : '';
     const paramsStr = req.params ? `, params: ${JSON.stringify(req.params, null, 2).replace(/\n/g, '\n    ')}` : '';
@@ -46,9 +47,9 @@ function generateStepCode(step: TestStep, index: number, pomInstanceName: string
     if (req.extractions && req.extractions.length > 0) {
       for (const ext of req.extractions) {
         code += `    await apiManager.extractVariable(${responseName}, {\n`;
-        code += `      variableName: '${ext.variableName}',\n`;
-        code += `      path: '${ext.path}',\n`;
-        code += `      source: '${ext.source || 'body'}'\n`;
+        code += `      variableName: ${str(ext.variableName)},\n`;
+        code += `      path: ${str(ext.path)},\n`;
+        code += `      source: ${str(ext.source || 'body')}\n`;
         code += `    });\n`;
       }
     }
@@ -60,19 +61,20 @@ function generateStepCode(step: TestStep, index: number, pomInstanceName: string
       }
     }
   } else {
-    // UI step generation fallback
+    // UI step generation. Element names are guaranteed by normalizeSuite().
     const locName = step.locator?.name;
-    const target = locName ? `${pomInstanceName}.${locName}` : 'page';
+    const target = locName ? `${pomInstanceName}.${locName}` : `page.locator(${str(step.locator?.value || 'body')})`;
+    const val = str(step.value);
 
     switch (step.action) {
       case 'navigate':
-        code += `    await ${pomInstanceName}.navigate('${step.value}');\n`;
+        code += `    await ${pomInstanceName}.navigate(${str(step.value || step.locator?.value || '/')});\n`;
         break;
       case 'click':
         code += `    await ${target}.click();\n`;
         break;
       case 'fill':
-        code += `    await ${target}.fill('${step.value}');\n`;
+        code += `    await ${target}.fill(${val});\n`;
         break;
       case 'check':
         code += `    await ${target}.check();\n`;
@@ -81,29 +83,32 @@ function generateStepCode(step: TestStep, index: number, pomInstanceName: string
         code += `    await ${target}.uncheck();\n`;
         break;
       case 'select':
-        code += `    await ${target}.selectOption('${step.value}');\n`;
+        code += `    await ${target}.selectOption(${val});\n`;
         break;
       case 'waitForElement':
         code += `    await ${target}.waitFor({ state: 'visible' });\n`;
         break;
       case 'verifyText':
-        code += `    await expect(${target}).toHaveText('${step.value}');\n`;
+        code += `    await expect(${target}).toHaveText(${val});\n`;
         break;
       case 'verifyVisible':
         code += `    await expect(${target}).toBeVisible();\n`;
+        break;
+      case 'verifyValue':
+        code += `    await expect(${target}).toHaveValue(${val});\n`;
         break;
       case 'custom': {
         const cleanVal = step.value?.trim() || '';
         const isGherkin = /^(Given|When|Then|And|But)\s+/i.test(cleanVal);
         if (isGherkin) {
-          code += `    // Cucumber Step: ${cleanVal}\n`;
+          code += `    // Cucumber Step: ${comment(cleanVal)}\n`;
         } else {
           code += `    ${cleanVal}\n`;
         }
         break;
       }
       default:
-        code += `    // Unknown action: ${step.action}\n`;
+        code += `    // Unknown action: ${comment(step.action)}\n`;
     }
   }
 
@@ -124,7 +129,7 @@ export function generateSpecFile(suite: TestSuite, pomClassName: string): string
   
   specCode += `import { ${pomClassName} } from './pages/${pomClassName}';\n\n`;
   
-  specCode += `test.describe('${suite.title}', () => {\n`;
+  specCode += `test.describe(${str(suite.title)}, () => {\n`;
   
   if (hasApiSteps) {
     specCode += `  let stateStore: StateStore;\n`;
@@ -145,10 +150,10 @@ export function generateSpecFile(suite: TestSuite, pomClassName: string): string
   specCode += `  });\n\n`;
 
   for (const testCase of suite.testCases) {
-    specCode += `  test('${testCase.title}', async ({ page }) => {\n`;
+    specCode += `  test(${str(testCase.title)}, async ({ page }) => {\n`;
     
     if (testCase.description) {
-      specCode += `    // ${testCase.description}\n`;
+      specCode += `    // ${comment(testCase.description)}\n`;
     }
 
     for (let i = 0; i < testCase.steps.length; i++) {
