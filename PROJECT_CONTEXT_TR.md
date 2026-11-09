@@ -44,15 +44,20 @@ graph TD
 - [x] **Canlı Runner (Quick Run):** Dashboard içinde gerçek zamanlı API isteği atan ve terminale yazdıran motor kuruldu.
 - [x] **Generator Motoru:** JSON verisinden Playwright kodu (Spec + POM) üreten temel motor (`upaf/generator`) kuruldu.
 - [x] **Git Entegrasyonu:** Üretilen kodun GitHub/GitLab repolarına otomatik push edilmesi.
+- [x] **Canlı Recorder:** Gerçek tarayıcıda tıklama/doldurma/seçim ve text/visible doğrulamalarını adım olarak kaydeder (`auth-proxy.js` → `/api/recorder/*`).
+- [x] **Canlı UI Runner:** UI adımlarını Playwright ile koşturur, fallback tabanlı locator kurtarma ve ekran görüntüsü sunar (`/api/run-ui-test`). Lokal çalışır: `cd dashboard && npm run proxy`, adres `VITE_RUNNER_URL`.
+- [x] **Generator sağlamlaştırma (Faz 4.5):** Değer kaçışı, `verifyValue`, eksik eleman adlarının selector'dan otomatik türetilmesi.
 - [ ] **Visual Testing:** Ekran görüntüsü karşılaştırma ve visual regression test adımları.
 
 ## Yakın Gelecek Planı
-1. **Veritabanı (Supabase) Entegrasyonu:** Test Builder'daki adımların ve projelerin LocalStorage'dan alınıp Supabase'deki `projects` ve `test_steps` tablolarına bağlanması.
-2. **Git Push Entegrasyonu:** Üretilen kodun kullanıcının reposuna doğrudan Push/PR atılması.
-3. **Abonelik (Subscription):** Paket limitlerine göre Dashboard erişim kısıtlamaları.
+Detaylı checklist için `plan.md` dosyasına bakın.
+1. **Faz 5a:** Recorder/Runner sağlamlaştırma (oturum timeout, SSE, relative URL, Playwright önerilen locator'ları).
+2. **Faz 5b:** LLM tabanlı gerçek self-healing.
+3. **Faz 5c:** Visual testing.
 
 ## 🗺️ Yol Haritası
 1. **Aşama 1:** Dashboard, Generator ve Canlı Runner İskeletinin Kurulması ✅ (Tamamlandı).
 2. **Aşama 2:** Veritabanı ve Test Builder Veri Entegrasyonu (Supabase) ✅ (Tamamlandı).
 3. **Aşama 3:** Git Entegrasyonu (CI/CD Teslimatı) ✅ (Tamamlandı).
-4. **Aşama 4:** Zeka Özelliklerinin Eklenmesi (Görsel Testler, Yapay Zeka Locator Kurtarma).
+4. **Aşama 4:** Monetizasyon (`is_free` kısıtları, abonelik) ⬜.
+5. **Aşama 5:** Zeka Özellikleri (Recorder ✅, Runner ✅, AI Locator Kurtarma, Görsel Testler) 🟡.
